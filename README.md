@@ -716,3 +716,39 @@ Dentro de la otra pestaña tenemos la de logica de lenguajes que nos permitira c
 * El usuario debera introducir el  alfabeto separado por comas cada uno de los simbolos que se introduzcan, para despues pedir la longitud maxima que se podran tener en las cadenas. 
 * Una vez ingresada la informacion generaremos los lenguajes que se mostraran dentro de la interfaz grafica.
 
+Se desplegará la interfaz gráfica con la pestaña de Simulación, que permite cargar, visualizar y validar el procesamiento de cadenas en un **Autómata Finito (DFA/NFA)**.
+* Carga de Autómata: El usuario debe cargar un archivo con la definición formal del **autómata** ($Q, \Sigma, \delta, q_0, F$). Una vez cargado, la interfaz renderizará el grafo dinámico y la tabla de transiciones correspondiente.
+* Validación de Cadenas: El usuario podrá introducir una cadena en el campo de texto y presionar el botón Validar. 
+* El sistema realizará el recorrido paso a paso, mostrando en tiempo real: El cálculo de la $\lambda$-clausura (en caso de ser un **NFA-$\lambda$)**.
+* El historial de transiciones estado por estado en la consola inferior.
+* El estado final del proceso, indicando con una etiqueta visual si la cadena es ACEPTADA o RECHAZADA.
+* Operaciones Especiales: La interfaz incluye funciones para el cálculo manual de la $\lambda$-clausura de un estado específico y un modo de procesamiento masivo para validar múltiples cadenas simultáneamente.
+
+Esta sección ofrece un entorno de creación y edición manual, diseñado para que el usuario defina paso a paso la estructura formal de un **autómata** sin necesidad de cargar archivos externos. 
+* El usuario deberá introducir los elementos básicos del **autómata** en los campos correspondientes:
+* **Estados (Q)**: Lista de estados separados por comas.
+* **Alfabeto ($\Sigma$)**: Símbolos permitidos para las transiciones.
+* **Estado Inicial ($q_0$)**: El nodo de arranque del sistema.
+* **Estados Finales (F)**: Conjunto de estados de aceptación.
+* Generación de Matriz: Al presionar Generar Matriz, la interfaz habilitará una tabla dinámica donde el usuario podrá especificar las transiciones ($\delta$) para cada combinación de estado y símbolo.
+* Visualización y Persistencia: El botón Dibujar y Validar permite renderizar el grafo resultante en el lienzo principal para verificar visualmente la lógica del diseño.
+* El usuario tiene la opción de exportar su creación mediante el botón Guardar JFF, generando un archivo compatible con herramientas estándar como JFLAP para su uso posterior.
+
+Despues tenemos la péstaña que constituye el módulo de optimización y conversión, donde el usuario puede procesar **autómatas existentes** para obtener versiones equivalentes más eficientes o simplificadas.
+* Gestión de Archivos: Mediante el botón Cargar Original, se importa el **autómata** sobre el cual se desea trabajar. La interfaz presenta un diseño de doble panel para comparar visualmente el modelo "Original" frente al "Resultado" obtenido.
+* Algoritmos de Conversión: * Convertir **AFN $\rightarrow$ AFD**: Ejecuta el algoritmo de construcción de subconjuntos para transformar un **Autómata Finito No Determinista** en uno **Determinista equivalente**.
+* Minimizar **AFD**: Aplica algoritmos de reducción de estados para encontrar el **autómata** con el menor número de estados posible que acepte el mismo lenguaje.
+* Consola de Diagnóstico: La parte inferior incluye un log informativo que detalla el éxito de la operación y datos técnicos, tales como el número de estados originales vs. mínimos y las clases de equivalencia generadas.
+* Exportación de Resultados: Una vez realizada la transformación, el usuario puede presionar Guardar Resultado para descargar el nuevo autómata, permitiendo su uso inmediato en los módulos de simulación o construcción.
+
+La siguiente pestaña integra una herramienta de abstracción algebraica, diseñada para extraer la expresión regular equivalente a partir del **autómata** previamente procesado o cargado en el sistema.
+* Vinculación de Datos: El módulo utiliza automáticamente el **AFD** resultante de la pestaña anterior ("Operaciones"), asegurando que la conversión se base en la versión más optimizada o simplificada del modelo.
+* Procesamiento: Mediante el botón Generar **Expresión Regular**, el sistema aplica algoritmos de eliminación de estados o el método de Arden para reducir la lógica del grafo a una representación textual compacta.
+* Visualización del Resultado: La interfaz presenta un panel de salida dedicado donde se muestra la expresión obtenida (utilizando operadores estándar como * para cerradura de Kleene, | para unión y concatenación), permitiendo al usuario copiar la cadena para fines de documentación o programación.
+
+La ultima pestaña funciona como un motor de síntesis lógica, permitiendo al usuario transformar una descripción textual (ER) en un modelo gráfico funcional **(AF)**.
+* Entrada de Expresión: El usuario dispone de un campo de texto dedicado para ingresar la **Expresión Regular** deseada. El sistema es capaz de interpretar operadores de unión, concatenación y cerraduras.
+* Proceso de Construcción: Al presionar el botón Construir, la aplicación implementa algoritmos de conversión para generar automáticamente un **autómata** equivalente a la expresión proporcionada.
+* Visualización Dinámica: El resultado se proyecta en un lienzo interactivo que muestra la estructura de estados y transiciones, facilitando la comprensión de cómo se descompone la lógica de la expresión en pasos finitos.
+* Exportación Directa: Al igual que en el módulo de construcción manual, se incluye la función Guardar .JFF, permitiendo descargar el autómata generado para su análisis externo o para cargarlo posteriormente en el Simulador del proyecto.
+
