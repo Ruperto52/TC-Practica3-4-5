@@ -42,8 +42,17 @@ Es un modelo matemático formado por una quíntupla $N_\lambda = \{\Sigma, S, S_
 2. Q: Conjunto finito de estados de transición.
 3. q0: Conjunto de estados de inicio $S_0 \subseteq S$.
 4. F: Conjunto finito de estados de finalización o aceptación, donde $F \subseteq S$.
-5. $\delta_\lambda : Función de transición, se define como:
-  $$\delta_\lambda: S \times (\Sigma \cup \{\lambda\}) \to P(S), (\forall s \in S \text{ y } \forall a \in \Sigma)$$
+5. **$\delta_\lambda$ : Función de transición**
+   Se define formalmente como:
+   $$\delta_\lambda: S \times (\Sigma \cup \{\lambda\}) \to \mathcal{P}(S)$$
+
+   Donde se cumple que:
+   * $S$: Es el conjunto finito de estados.
+   * $\Sigma \cup \{\lambda\}$: Es el alfabeto de entrada incluyendo la transición vacía.
+   * $\mathcal{P}(S)$: Es el conjunto potencia (o conjunto de partes) de $S$.
+   
+   **Definición de elementos:**
+   * $\forall s \in S, \forall a \in (\Sigma \cup \{\lambda\})$
 
 ### **El Teorema De Kleene**
 El teorema de Kleene establece que un lenguaje es regular si y solo si es aceptado por algún autómata finito, demostrando la equivalencia entre las expresiones regulares y los autómatas finitos deterministas o no deterministas.  Desarrollado por Stephen Cole Kleene en la década de 1950, este teorema fundamental de la teoría de la computación permite convertir cualquier expresión regular en un autómata finito y viceversa mediante algoritmos constructivos. 
@@ -685,14 +694,443 @@ Este método constituye la contraparte del Teorema de Kleene, encargándose de t
 
 ## Implementacion dentro del ```main.py```
 
-### Pestaña 1
-### Pestaña 2
-### Pestaña 3
-### Pestaña 4
-### Pestaña 5
-### Pestaña 6
-### Pestaña 7
+### Librerias utilizadas
+```python
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog, simpledialog
+from logic.strings_logic import get_prefixes, get_suffixes, get_substrings
+from logic.languages_logic import get_kleene_closure, get_positive_closure
+from logic.automaton_logic import Automaton 
+```
+**Explicacion de las librerias utilizadas**
+* **Tkinter & TTK**: Herramientas base para la construcción de la GUI. Se utiliza `ttk` específicamente para el control de pestañas (`Notebook`), permitiendo una navegación organizada entre las distintas funcionalidades del simulador.
+* **Diálogos Estándar**: 
+    * `messagebox`: Para notificar errores de validación o confirmar acciones exitosas.
+    * `filedialog`: Crucial para la persistencia de datos, permitiendo al usuario buscar y seleccionar archivos `.jff` (JFLAP) o `.json`.
+    * `simpledialog`: Utilizado para solicitar datos rápidos al usuario, como el nombre de un estado para calcular su $\lambda$-clausura.
+* **Lógica de Cadenas** (`strings_logic`): Provee las funciones esenciales para la Pestaña 1, permitiendo el análisis morfológico de cadenas (prefijos, sufijos y subcadenas).
+* **Lógica de Lenguajes** (`languages_logic`): Implementa los algoritmos de clausura necesarios para la Pestaña 2, manejando potencias de alfabetos mediante la Clausura de Kleene ($\Sigma^*$) y la Clausura Positiva ($\Sigma^+$).
+* **Motor de Autómatas** (`Automaton`): Es la clase núcleo que representa la quintupla formal $M = (Q, \Sigma, \delta, q_0, F)$. Gestiona tanto la lógica de transición como los métodos para renderizar el grafo en los componentes de Canvas.
 
+### Arquitectura de la Clase Principal
+El corazón de la aplicación es la clase `App`, que centraliza la configuración visual y la persistencia de los objetos de tipo `Automaton`.
+
+### Constructor e inicializaciacion de la inferfaz(`__init__`)
+Este bloque constituye el punto de entrada de la aplicación. Se encarga de configurar la ventana principal, inicializar los motores lógicos y estructurar el sistema de navegación por pestañas.
+
+```python
+def __init__(self, root):
+    self.root = root
+    self.root.title("Simulador Universal de Autómatas - ESCOM")
+    self.root.geometry("1400x950")
+    self.root.configure(bg="#0f172a")
+    
+    # Inicialización de motores lógicos
+    self.dfa_sim = Automaton()
+    self.dfa_const = Automaton()
+    self.dfa_res = None 
+    self.dfa_regex_to_af = None 
+    
+    # ... (Configuración de temas y Notebook)
+```
+**Componentes Relevantes**
+* **Configuración de Ventana**: Define las dimensiones de trabajo ($1400 \times 950$) y establece una estética moderna mediante un fondo oscuro (`#0f172a`).
+* **Instanciación de Motores Lógicos**:
+    * Crea instancias independientes de la clase `Automaton` para el simulador y el constructor manual.
+    * Prepara variables de control (`dfa_res`, `dfa_regex_to_af`) para almacenar los resultados de conversiones complejas sin interferir con los autómatas cargados originalmente.
+* **Diccionario de Temas**: Implementa un sistema de codificación por colores para las 7 secciones del programa. Cada índice corresponde a una pestaña, facilitando la identidad visual mediante colores de acento (`accent`) y botones (`btn`).
+* **Sistema de Navegación** (Notebook):
+    * Utiliza `ttk.Notebook` para gestionar las 7 áreas funcionales.
+    * Cada pestaña se crea como un `tk.Frame` independiente contenido dentro del `Notebook`.
+* **Binding de Eventos**: Vincula el evento `<<NotebookTabChanged>>` al método `actualizar_estilo_pestaña`, lo que permite que la interfaz cambie de color dinámicamente al navegar entre funciones.
+* **Carga de Módulos UI**: Dispara las funciones `setup_tab_...` que dibujan los componentes específicos (botones, entradas, lienzos) de cada sección.
+
+**Resumen de funcionamiento**: El constructor prepara el estado interno del programa y levanta la estructura visual. Su lógica asegura que cada sección del simulador tenga su propio espacio de memoria (objetos `Automaton`) y su propia identidad visual, garantizando que el usuario siempre sepa en qué módulo se encuentra trabajando.
+
+### Pestaña 1 (CADENAS)
+```python
+# --- PESTAÑA 1: CADENAS ---
+def setup_tab_cadenas(self):
+    t = self.temas[0]
+    f = tk.Frame(self.tabs[0], bg="#1e293b", padx=30, pady=30)
+    # ... (Configuración de UI)
+    self.ent_c = tk.Entry(f, font=("Consolas", 16), ...) # Entrada de cadena
+    tk.Button(f, text="CALCULAR", command=self.run_c, ...) # Disparador de lógica
+
+def run_c(self):
+    s = self.ent_c.get()
+    self.txt_c.delete("1.0", tk.END)
+    self.txt_c.insert(tk.END, f"Prefijos: {get_prefixes(s)}\n\nSufijos: {get_suffixes(s)}\n\nSubcadenas: {get_substrings(s)}")
+```
+
+**Interfaz de Usuario (UI)**:
+* **Contenedor Principal**: Utiliza un `tk.Frame` con un acolchado (padx/pady) de 30 píxeles para asegurar que los elementos no toquen los bordes, manteniendo una estética limpia.
+* **Campo de Entrada** (`ent_c`): Un control de tipo Entry con fuente Consolas de tamaño 16, diseñado para facilitar la lectura de caracteres individuales, lo cual es crítico en teoría de autómatas.
+* **Área de Resultados** (`txt_c`): Un componente Text configurado con un fondo oscuro (#020617) que funciona como consola de salida para mostrar los conjuntos resultantes.
+
+**Lógica de Procesamiento (`run_c`)**:
+* **Captura de Datos**: Recupera la cadena ingresada por el usuario mediante `self.ent_c.get()`.
+* **Integración con Módulos Externos**: Invoca las funciones `get_prefixes`, `get_suffixes` y `get_substrings` importadas de `logic.strings_logic`.
+* **Formateo de Salida**: Limpia el área de texto previa e inserta los resultados de manera organizada, permitiendo al usuario visualizar las diferentes descomposiciones de la cadena de forma simultánea.
+
+**Resumen de funcionamiento**: Este bloque actúa como un procesador de texto especializado. El usuario ingresa una cadena (por ejemplo, "abc") y, al presionar "CALCULAR", el programa delega el cálculo matemático a las funciones lógicas y devuelve visualmente los conjuntos formales que componen dicha cadena, respetando el tema de color verde asignado a esta sección.
+
+### Pestaña 2 -> (LENGUAJES)
+```python
+# --- PESTAÑA 2: LENGUAJES ---
+def setup_tab_lenguajes(self):
+    t = self.temas[1]
+    f = tk.Frame(self.tabs[1], bg="#1e293b", padx=30, pady=30)
+    # ... (Entradas para Alfabeto y Potencia n)
+    tk.Button(f, text="CALCULAR CLAUSURAS", command=self.run_l, ...)
+
+def run_l(self):
+    alpha = [x.strip() for x in self.ent_l.get().split(",") if x.strip()]
+    try:
+        n = int(self.ent_n.get())
+        # ... (Cálculo e inserción de resultados)
+    except: messagebox.showerror("Error", "n debe ser entero")
+```
+
+**Entradas de Datos Múltiples**:
+* **Alfabeto (`ent_l`)**: Campo diseñado para recibir una lista de símbolos separados por comas. El código procesa esta entrada eliminando espacios en blanco innecesarios mediante `strip()`.
+* **Potencia Máxima (`ent_n`)**: Define el límite superior de iteraciones para las clausuras. Incluye una validación de tipo para asegurar que el valor sea un número entero.
+
+**Lógica de Operaciones de Lenguajes (`run_l`)**:
+* **Clausura de Kleene ($\Sigma^*$)**: Genera todas las combinaciones posibles de los símbolos del alfabeto, incluyendo la cadena vacía ($\lambda$), desde la potencia 0 hasta $n$.
+* **Clausura Positiva ($\Sigma^+$)**: Genera las combinaciones de símbolos desde la potencia 1 hasta $n$ (excluyendo la cadena vacía).
+* **Gestión de Errores**: Implementa un bloque `try-except` para capturar entradas no numéricas en el campo de potencia, informando al usuario mediante un `messagebox` de error para evitar el cierre inesperado de la aplicación.
+* **Estética Visual**: Utiliza el tema de color amarillo (`#fbbf24`) para resaltar los títulos y botones, manteniendo la coherencia visual del sistema de pestañas.
+
+**Resumen de funcionamiento**: El usuario define un alfabeto (ej. a, b) y un nivel de profundidad (ej. 3). Al ejecutar, el programa utiliza funciones recursivas o iterativas de `languages_logic` para construir y mostrar los conjuntos resultantes de cadenas, permitiendo observar la expansión exponencial del lenguaje conforme aumenta $n$.
+
+### Pestaña 3 -> (SIMULADOR)
+```python
+# --- PESTAÑA 3: SIMULADOR ---
+def setup_tab_simulador(self):
+    t = self.temas[2]
+    # Encabezado: Botón de carga y visualización de la quíntupla formal
+    top = tk.Frame(self.tabs[2], bg="#0f172a"); top.pack(fill="x")
+    tk.Button(top, text="CARGAR ARCHIVO", command=self.importar_sim, bg=t["btn"], fg="white", font=("bold", 10)).pack(side="left", padx=20, pady=10)
+    self.lbl_q = tk.Label(top, text="M = (Q, Σ, δ, q0, F)", bg="#0f172a", fg=t["accent"], font=("Consolas", 12, "bold")); self.lbl_q.pack(side="right", padx=20)
+    
+    # Cuerpo: Panel dividido para Grafo (Canvas) y Tabla de Transiciones
+    paned = tk.PanedWindow(self.tabs[2], orient="horizontal", bg="#1e293b", borderwidth=0); paned.pack(fill="both", expand=True)
+    self.can_sim = tk.Canvas(paned, bg="#020617", highlightthickness=1, highlightbackground=t["accent"]); paned.add(self.can_sim, stretch="always", width=800)
+    self.f_tabla_sim = tk.Frame(paned, bg="#1e293b", width=400); paned.add(self.f_tabla_sim, stretch="never")
+    
+    # Pie: Controles de validación, botones de acción y rastreo (trace)
+    bottom = tk.Frame(self.tabs[2], bg="#0f172a", pady=15); bottom.pack(fill="x")
+    val_f = tk.Frame(bottom, bg="#0f172a"); val_f.pack(side="left", padx=20)
+    self.ent_cad_sim = tk.Entry(val_f, font=("Consolas", 14), width=35, bg="#1e293b", fg="white"); self.ent_cad_sim.pack(pady=10)
+    
+    btn_f = tk.Frame(val_f, bg="#0f172a"); btn_f.pack(fill="x")
+    opts = {"bg": t["btn"], "fg": "white", "font": ("bold", 11), "side": "left", "expand": True, "fill": "x"}
+    tk.Button(btn_f, text="VALIDAR", command=self.validar_sim, **{k:v for k,v in opts.items() if k != "side" and k != "expand" and k != "fill"}).pack(side="left", expand=True, fill="x", padx=2)
+    tk.Button(btn_f, text="λ-CLAUSURA", command=self.ver_clausura_sim, bg="#475569", fg="white").pack(side="left", expand=True, fill="x", padx=2)
+    tk.Button(btn_f, text="MASIVO", command=self.prueba_masiva_sim, bg="#475569", fg="white").pack(side="left", expand=True, fill="x", padx=2)
+
+    self.lbl_res_sim = tk.Label(val_f, text="ESTADO: ---", bg="#0f172a", fg="white", font=("bold", 14)); self.lbl_res_sim.pack(pady=20)
+    self.txt_trace_sim = tk.Text(bottom, height=10, bg="#020617", fg=t["accent"], font=("Consolas", 11)); self.txt_trace_sim.pack(side="right", fill="both", expand=True, padx=20)
+
+def importar_sim(self):
+    """Carga archivos .json o .jff y actualiza la interfaz gráfica."""
+    p = filedialog.askopenfilename()
+    if p:
+        self.dfa_sim.load_from_json(p) if p.endswith(".json") else self.dfa_sim.load_from_jff(p)
+        self.dfa_sim.draw_on_canvas(self.can_sim)
+        self.mostrar_tabla(self.f_tabla_sim, self.dfa_sim, color_accent=self.temas[2]["accent"])
+        self.update_q_ui()
+
+def validar_sim(self):
+    """Valida la cadena actual y muestra el camino recorrido en el área de texto."""
+    ok, path, _ = self.dfa_sim.validate_string(self.ent_cad_sim.get())
+    self.txt_trace_sim.delete("1.0", tk.END); self.txt_trace_sim.insert(tk.END, "\n".join(path))
+    self.lbl_res_sim.config(text="ACEPTADA" if ok else "RECHAZADA", fg="#10b981" if ok else "#ef4444")
+
+def prueba_masiva_sim(self):
+    """Procesa múltiples cadenas desde un .txt y reporta OK/FAIL por cada una."""
+    p = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
+    if p:
+        with open(p, 'r') as f:
+            res = [f"{c.strip()}: {'OK' if self.dfa_sim.validate_string(c.strip())[0] else 'FAIL'}" for c in f]
+        self.txt_trace_sim.delete("1.0", tk.END); self.txt_trace_sim.insert(tk.END, "--- RESULTADOS ---\n" + "\n".join(res))
+
+def update_q_ui(self):
+    """Actualiza la etiqueta dinámica con los elementos de la quíntupla formal."""
+    d = self.dfa_sim
+    self.lbl_q.config(text=f"M = ({{{','.join(d.states)}}}, {{{','.join(d.alphabet)}}}, δ, {d.initial_state}, {{{','.join(d.final_states)}}})")
+```
+**Gestión de Archivos (`importar_sim`)**:
+* Soporta formatos .json y .jff (JFLAP).
+* Al cargar un archivo, se disparan tres acciones automáticas: la renderización del grafo en el Canvas, la generación de la tabla de transiciones y la actualización de la etiqueta de la quíntupla formal.
+
+**Visualización Dinámica**:
+* **Canvas (`can_sim`)**: Espacio dedicado al dibujo del autómata, permitiendo ver estados y transiciones de forma gráfica.
+* **PanedWindow**: Divide la vista entre el grafo y una tabla de transiciones estática para una referencia técnica rápida.
+**Herramientas de Validación**:
+* **Validación Individual (`validar_sim`)**: Procesa una cadena y muestra el camino (trace) de estados recorridos, indicando visualmente con colores (verde/rojo) si la cadena fue aceptada o rechazada.
+* **Prueba Masiva (`prueba_masiva_sim`)**: Permite cargar un archivo `.txt` con múltiples cadenas para validarlas en lote, ideal para pruebas de estrés del autómata.
+* **$\lambda$-Clausura (`ver_clausura_sim`)**: Herramienta de inspección para AFN-$\lambda$ que permite consultar el conjunto de estados alcanzables mediante transiciones vacías desde un estado específico.
+* **Actualización de la Quíntupla (`update_q_ui`)**: Refleja dinámicamente la definición formal $M = (Q, \Sigma, \delta, q_0, F)$ en la interfaz, extrayendo los datos directamente del objeto `Automaton` cargado.
+
+**Resumen de funcionamiento**: Esta sección actúa como el entorno de pruebas principal. El usuario carga un modelo de autómata y puede "interrogarlo" mediante entradas de texto o archivos masivos. La interfaz responde mostrando no solo el resultado lógico (Aceptada/Rechazada), sino también la evidencia del proceso (el camino de estados y su estructura formal), todo bajo el esquema de color morado (`#a855f7`).
+
+### Pestaña 4 -> (CONSTRUCTOR)
+```python
+# --- PESTAÑA 4: CONSTRUCTOR ---
+def setup_tab_constructor(self):
+    t = self.temas[3]
+    # Panel Izquierdo: Entradas para la definición formal y Matriz de transiciones
+    p_left = tk.Frame(main_f, bg="#1e293b", width=300)
+    for txt, key in [("Estados Q:", "q"), ("Alfabeto Σ:", "s"), ("Inicial q0:", "i"), ("Finales F:", "f")]:
+        # Genera campos de texto dinámicos almacenados en self.c_in
+        
+    # Panel Derecho: Visualización del grafo (Canvas) y validación de cadenas
+    self.can_c = tk.Canvas(p_right, bg="#020617", ...)
+    self.txt_trace_c = tk.Text(bottom_c, ...) # Historial de estados (trace)
+
+def gen_matriz_c(self):
+    """Genera una cuadrícula de edición (Entry) basada en Q y Σ ingresados."""
+    # Extrae estados y alfabeto para construir la tabla editable
+    self.celdas_const = self.mostrar_tabla(self.f_m_c, self.dfa_const, editable=True, ...)
+
+def sync_dfa_const(self):
+    """Sincroniza los datos de la interfaz con el objeto lógico Automaton."""
+    # Lee los Entry de la matriz y actualiza el diccionario de transiciones del autómata
+    for (q, a), ent in self.celdas_const.items():
+        # Agrega cada transición ingresada por el usuario al motor lógico
+
+def upd_and_test_c(self):
+    """Dibuja el autómata actual y valida la cadena de prueba."""
+    self.sync_dfa_const()
+    self.dfa_const.draw_on_canvas(self.can_c)
+    # Ejecuta validación y muestra si la cadena es ACEPTADA o RECHAZADA
+
+def exportar_jff_c(self):
+    """Guarda el autómata diseñado en formato compatible con JFLAP."""
+    self.sync_dfa_const()
+    # Abre diálogo de guardado y genera el archivo .jff
+```
+**Explicacion del codigo**
+* **Definición Formal Dinámica**: Utiliza un diccionario (`self.c_in`) para mapear las entradas de texto a los elementos de la quíntupla, permitiendo cambios en tiempo real.
+* **Matriz de Transición Editable**: Es el núcleo del constructor. Al presionar "GENERAR MATRIZ", el programa crea una cuadrícula de campos Entry donde el usuario puede escribir el estado destino (ej. q1 o q1, q2 para AFN).
+* **Sincronización (Sync)**: El método `sync_dfa_const` actúa como recolector de datos, traduciendo lo que el usuario escribió en la interfaz a una estructura de datos que el motor de lógica pueda procesar.
+* **Persistencia JFF**: Incluye una función de exportación que permite llevar el trabajo diseñado en esta herramienta hacia JFLAP, facilitando la interoperabilidad.
+
+**Resumen de funcionamiento**: Este módulo transforma datos tabulares en un modelo matemático funcional. El flujo es: Definir (Q, Σ) $\rightarrow$ Generar (Matriz) $\rightarrow$ Llenar ($\delta$) $\rightarrow$ Validar (Visualización y Trace). Todo bajo el esquema de color rosa (`#db2777`).
+
+### Pestaña 5 -> (OPERACIONES)
+```python
+# --- PESTAÑA 5: OPERACIONES ---
+def setup_tab_operaciones(self):
+    t = self.temas[4]
+    # Barra de herramientas: Carga, Conversión, Minimización y Guardado
+    top = tk.Frame(main_f, bg="#0f172a")
+    # Botones principales vinculados a cargar_op, convertir_afd y minimizar_afd
+    
+    # Vista Comparativa: Panel dividido (PanedWindow) para Original vs Resultado
+    paned = tk.PanedWindow(main_f, orient="horizontal", ...)
+    self.can_op_izq = tk.Canvas(...) # Muestra el autómata base
+    self.can_op_der = tk.Canvas(...) # Muestra el autómata transformado
+    
+    # Consola de bitácora (Log)
+    self.txt_op = tk.Text(main_f, height=6, ...)
+
+def cargar_op(self):
+    """Carga un autómata base (AFN o AFD) para realizar operaciones sobre él."""
+    # Inicializa dfa_op y renderiza en el canvas izquierdo (ORIGINAL)
+
+def convertir_afd(self):
+    """Ejecuta el algoritmo de construcción de subconjuntos para transformar AFN en AFD."""
+    if not hasattr(self, 'dfa_op'): return
+    self.dfa_res = self.dfa_op.to_dfa() # Llamada al motor lógico
+    self.dfa_res.draw_on_canvas(self.can_op_der) # Renderiza en el canvas derecho
+
+def minimizar_afd(self):
+    """Aplica el algoritmo de partición para reducir el AFD al mínimo número de estados."""
+    if not hasattr(self, 'dfa_op'): return
+    min_dfa, o, m, p = self.dfa_op.minimize()
+    self.dfa_res = min_dfa
+    self.dfa_res.draw_on_canvas(self.can_op_der)
+    # Reporta métricas de reducción en la bitácora
+
+def guardar_op(self):
+    """Exporta el autómata resultante de la operación a formato JFF."""
+    if self.dfa_res: self.dfa_res.save_to_jff(p)
+```
+* **Vista de Espejo**: El uso de un `PanedWindow` con dos Canvas permite al usuario comparar directamente la complejidad del autómata original frente al procesado, facilitando la comprensión visual de los algoritmos.
+
+**Algoritmos de Transformación**:
+
+* **Conversión**: Utiliza el método `to_dfa()` para resolver el no-determinismo.
+* **Minimización**: Utiliza el método `minimize()`, que además de devolver el nuevo objeto `Automaton`, entrega estadísticas (estados originales vs. finales) y las particiones (clases de equivalencia) creadas.
+* **Bitácora de Información (`txt_op`)**: Actúa como un log de eventos que informa al usuario si las operaciones se completaron con éxito y proporciona datos cuantitativos sobre la reducción de estados.
+
+**Resumen de funcionamiento**: Esta sección funciona como un "laboratorio" de procesamiento. El flujo de trabajo consiste en Cargar un modelo, Transformar (mediante conversión o minimización) y Exportar el resultado. La interfaz garantiza que el usuario siempre vea la evolución del autómata, utilizando el esquema de color naranja (`#f97316`).
+
+### Pestaña 6 -> (Automata Finito -> Expresion Regular)
+```python
+# --- PESTAÑA 6: AF -> ER ---
+    def setup_tab_af_to_er(self):
+        """
+        Configura la interfaz visual para la conversión de Autómatas a Expresiones Regulares.
+        Utiliza un diseño minimalista centrado en un gran área de visualización de texto.
+        """
+        t = self.temas[5] # Recupera el esquema de color cian definido en el constructor
+        
+        # Contenedor principal de la pestaña con márgenes internos (padding)
+        f = tk.Frame(self.tabs[5], bg="#1e293b", padx=40, pady=40)
+        f.pack(expand=True, fill="both")
+        
+        # Título de la sección
+        tk.Label(f, text="AF ➔ EXPRESIÓN REGULAR", bg="#1e293b", 
+                 fg=t["accent"], font=("Arial", 22, "bold")).pack(pady=10)
+        
+        # Botón de acción: Activa el algoritmo de conversión
+        btn_gen = tk.Button(f, text="GENERAR EXPRESIÓN REGULAR", command=self.generar_er, 
+                           bg=t["btn"], fg="white", font=("bold", 13), padx=40, pady=12)
+        btn_gen.pack(pady=20)
+
+        # Contenedor estético para el resultado (con borde resaltado en cian)
+        res_container = tk.Frame(f, bg="#0f172a", padx=15, pady=15, 
+                                 highlightthickness=2, highlightbackground=t["accent"])
+        res_container.pack(fill="both", expand=True, pady=10)
+        
+        # Área de texto para la Expresión Regular resultante
+        # 'wrap="none"' es vital para no romper la expresión en varias líneas
+        self.txt_er_res = tk.Text(res_container, font=("Consolas", 18, "bold"), bg="#020617", 
+                                  fg="#5eead4", relief="flat", wrap="none", height=8)
+        self.txt_er_res.pack(side="top", fill="both", expand=True)
+        
+        # Scrollbar horizontal para permitir la lectura de ERs extremadamente largas
+        h_scroll = tk.Scrollbar(res_container, orient="horizontal", command=self.txt_er_res.xview)
+        h_scroll.pack(side="bottom", fill="x")
+        self.txt_er_res.config(xscrollcommand=h_scroll.set)
+
+    def generar_er(self):
+        """
+        Lógica de control para obtener la ER. Busca autómatas procesados en otras pestañas.
+        """
+        # Prioridad de origen: 
+        # 1. dfa_res (Resultado de conversión/minimización en Pestaña 5)
+        # 2. dfa_op (Autómata original cargado en Pestaña 5)
+        target = self.dfa_res if self.dfa_res else (self.dfa_op if hasattr(self, 'dfa_op') else None)
+        
+        if target:
+            try:
+                # Limpia el campo de texto antes de insertar el nuevo resultado
+                self.txt_er_res.delete("1.0", tk.END)
+                
+                # Ejecuta el método de conversión en el motor lógico y lo muestra
+                # Nota: Requiere que Automaton.to_regex() devuelva un string
+                self.txt_er_res.insert("1.0", target.to_regex())
+                
+            except AttributeError:
+                # Caso de error: El backend no tiene implementada la función de conversión
+                messagebox.showerror("Error", "El método 'to_regex' no está implementado en logic/automaton_logic.py")
+        else:
+            # Caso de aviso: El usuario no ha cargado ningún autómata todavía
+            messagebox.showwarning("Aviso", "Carga o procesa un autómata en la pestaña de Operaciones primero.")
+```
+**Integración de Resultados**: El método `generar_er` busca automáticamente un autómata disponible en la aplicación. Prioriza el resultado de la pestaña de Operaciones (`self.dfa_res`) o, en su defecto, el autómata original cargado (`self.dfa_op`).
+
+**Visualización de la Expresión**:
+
+* Utiliza una fuente de tipo Monospace (Consolas) de gran tamaño para facilitar el análisis de los operadores de la ER (clausuras, uniones, concatenaciones).
+* Implementa un Scrollbar Horizontal, ya que las expresiones regulares resultantes del método de eliminación de estados suelen ser considerablemente largas.
+
+**Manejo de Dependencias y Errores**:
+* **Validación de Datos**: Si no hay un autómata cargado previamente en el sistema, lanza un aviso al usuario indicando que debe procesar uno primero.
+* **Validación de Lógica**: Incluye un manejo de excepción `AttributeError` por si el motor lógico (`Automaton`) no tiene implementado el método `to_regex`, guiando al desarrollador sobre qué falta en el backend.
+
+**Resumen de funcionamiento**: Esta pestaña actúa como un "traductor". No requiere que el usuario ingrese datos nuevos, sino que consume el autómata que se esté trabajando en ese momento. Al presionar el botón, el programa aplica el algoritmo de síntesis (usualmente eliminación de estados) y proyecta la cadena de texto resultante en el área cian (`#06b6d4`).
+
+### Pestaña 7 (Expresion Regular -> Automata Finito)
+```python
+# --- PESTAÑA 7: ER -> AF ---
+    def setup_tab_er_to_af(self):
+        """
+        Configura la interfaz para transformar expresiones regulares en representaciones gráficas
+        de autómatas finitos.
+        """
+        t = self.temas[6] # Recupera el esquema de color 'Rojo claro' definido en el constructor
+        
+        # Contenedor principal con márgenes amplios
+        f = tk.Frame(self.tabs[6], bg="#1e293b", padx=30, pady=30)
+        f.pack(expand=True, fill="both")
+        
+        # Título de la sección con tipografía destacada
+        tk.Label(f, text="EXPRESIÓN REGULAR ➔ AUTÓMATA", bg="#1e293b", 
+                 fg=t["accent"], font=("Arial", 22, "bold")).pack(pady=10)
+        
+        # Área de entrada para la Expresión Regular
+        entry_f = tk.Frame(f, bg="#1e293b")
+        entry_f.pack(fill="x", pady=20)
+        tk.Label(entry_f, text="Ingresa la ER:", bg="#1e293b", fg="white").pack(anchor="w")
+        
+        self.ent_er_input = tk.Entry(entry_f, font=("Consolas", 18), bg="#0f172a", 
+                                     fg="white", relief="flat")
+        self.ent_er_input.pack(fill="x", pady=10)
+
+        # Contenedor de botones (Construir y Guardar)
+        btn_f = tk.Frame(f, bg="#1e293b")
+        btn_f.pack(pady=10)
+        
+        # Botón para disparar el algoritmo de conversión
+        tk.Button(btn_f, text="CONSTRUIR", command=self.er_a_afn, bg=t["btn"], 
+                  fg="white", font=("bold", 12), padx=25).pack(side="left", padx=10)
+        
+        # Botón para exportar el autómata resultante a JFLAP
+        tk.Button(btn_f, text="GUARDAR .JFF", command=self.guardar_er_af, bg="#475569", 
+                  fg="white", font=("bold", 12), padx=25).pack(side="left", padx=10)
+
+        # Lienzo (Canvas) donde se dibujará el autómata generado
+        self.can_er_af = tk.Canvas(f, bg="#020617", highlightthickness=2, 
+                                   highlightbackground=t["accent"])
+        self.can_er_af.pack(fill="both", expand=True, pady=20)
+
+    def er_a_afn(self):
+        """
+        Obtiene la ER de la interfaz, invoca la lógica de construcción y renderiza el grafo.
+        """
+        regex = self.ent_er_input.get().strip()
+        if regex:
+            try:
+                # Crea una nueva instancia de autómata para el resultado
+                self.dfa_regex_to_af = Automaton()
+                
+                # Ejecuta el motor lógico (ej. Algoritmo de Thompson)
+                # Nota: Requiere que logic/automaton_logic.py implemente from_regex
+                self.dfa_regex_to_af.from_regex(regex)
+                
+                # Refresca la UI y dibuja el autómata en el canvas correspondiente
+                self.root.update()
+                self.dfa_regex_to_af.draw_on_canvas(self.can_er_af)
+                
+            except AttributeError:
+                # Error si el backend aún no tiene el método implementado
+                messagebox.showerror("Error", "El método 'from_regex' no está implementado.")
+            except Exception as e:
+                # Captura errores sintácticos en la expresión regular (ej. paréntesis sin cerrar)
+                messagebox.showerror("Error", f"Error en la ER: {str(e)}")
+
+    def guardar_er_af(self):
+        """
+        Exporta el autómata generado a partir de la ER a un archivo compatible con JFLAP.
+        """
+        if hasattr(self, 'dfa_regex_to_af') and self.dfa_regex_to_af:
+            p = filedialog.asksaveasfilename(defaultextension=".jff")
+            if p: 
+                self.dfa_regex_to_af.save_to_jff(p)
+```
+* **Validación de Sintaxis**: El método `er_a_afn` incluye un bloque `try-except Exception` genérico. Esto es fundamental porque las expresiones regulares mal formadas son una fuente común de errores en el análisis sintáctico.
+
+* **Independencia de Datos**: A diferencia de la pestaña anterior, esta utiliza su propio objeto `self.dfa_regex_to_af`. Esto permite que el usuario trabaje en una conversión de ER a AF sin perder los autómatas que tenga cargados o minimizados en las pestañas de Simulador u Operaciones.
+
+* **Visualización Dinámica**: El uso de `self.root.update()` antes de draw_on_canvas asegura que el canvas procese correctamente sus dimensiones antes de que el motor de dibujo empiece a colocar los estados y transiciones.
+
+**Resumen de funcionamiento**: Esta pestaña cierra el círculo del Teorema de Kleene en la aplicación. El usuario ingresa una cadena de texto (ER), el sistema la analiza y construye una estructura de estados y transiciones que se proyecta visualmente en el lienzo oscuro con detalles en color rojo (`#f87171`).
 
 ## Como ocupar el software
 ### Primeros pasos
@@ -751,4 +1189,3 @@ La ultima pestaña funciona como un motor de síntesis lógica, permitiendo al u
 * Proceso de Construcción: Al presionar el botón Construir, la aplicación implementa algoritmos de conversión para generar automáticamente un **autómata** equivalente a la expresión proporcionada.
 * Visualización Dinámica: El resultado se proyecta en un lienzo interactivo que muestra la estructura de estados y transiciones, facilitando la comprensión de cómo se descompone la lógica de la expresión en pasos finitos.
 * Exportación Directa: Al igual que en el módulo de construcción manual, se incluye la función Guardar .JFF, permitiendo descargar el autómata generado para su análisis externo o para cargarlo posteriormente en el Simulador del proyecto.
-
