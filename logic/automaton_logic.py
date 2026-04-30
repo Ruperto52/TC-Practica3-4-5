@@ -305,39 +305,109 @@ class Automaton:
     def from_regex(self, regex):
         """
         Construye un AFN a partir de una Expresión Regular usando el Algoritmo de Thompson.
-       
         """
-        # Limpiamos el autómata actual
-        self.states = []
-        self.alphabet = list(set(c for c in regex if c.isalnum()))
-        self.transitions = {}
-        self.final_states = []
+        self.clear() # Limpiamos cualquier estado o transición anterior
+        regex = regex.replace(" ", "")
+        
+        # Función auxiliar para identificar literales del alfabeto
+        def is_literal(c):
+            return c not in ['(', ')', '*', '|', '.']
 
-        try:
-            # Esta es una implementación simplificada para procesar la ER
-            # En un entorno real, aquí se usaría un stack para manejar la precedencia
-            # de los operadores (*, ., |)
+        # 1. Extraemos el alfabeto de la expresión (ignorando operadores lógicos)
+        self.alphabet = list(set(c for c in regex if is_literal(c) and c != "λ"))
+        if "λ" not in self.alphabet:
+            self.alphabet.append("λ")
+
+        # 2. Insertar operador de concatenación explícito '.'
+        def insert_concat(re_str):
+            res = ""
+            for i in range(len(re_str)):
+                res += re_str[i]
+                if i + 1 < len(re_str):
+                    c1, c2 = re_str[i], re_str[i+1]
+                    # Si unimos un literal/cierre con otro literal/apertura, hay concatenación implícita
+                    if (is_literal(c1) or c1 in ['*', ')']) and (is_literal(c2) or c2 == '('):
+                        res += "."
+            return res
+
+        # 3. Convertir a notación Postfija (Shunting Yard Algorithm)
+        def to_postfix(re_str):
+            precedence = {'*': 3, '.': 2, '|': 1}
+            output = []
+            stack = []
+            for c in re_str:
+                if is_literal(c):
+                    output.append(c)
+                elif c == '(':
+                    stack.append(c)
+                elif c == ')':
+                    while stack and stack[-1] != '(':
+                        output.append(stack.pop())
+                    stack.pop() # Quitar el '(' de la pila
+                else:
+                    while stack and stack[-1] != '(' and precedence.get(stack[-1], 0) >= precedence.get(c, 0):
+                        output.append(stack.pop())
+                    stack.append(c)
+            while stack:
+                output.append(stack.pop())
+            return "".join(output)
+
+        regex_concat = insert_concat(regex)
+        postfix = to_postfix(regex_concat)
+
+        # 4. Construcción de Thompson (Evaluación usando una pila)
+        state_count = 0
+        def new_state():
+            nonlocal state_count
+            name = f"q{state_count}"
+            state_count += 1
+            self.states.append(name)
+            return name
+
+        stack = []
+        for c in postfix:
+            if c == '*': # Clausura de Kleene
+                start, end = stack.pop()
+                n_start, n_end = new_state(), new_state()
+                self.add_transition(n_start, "λ", start)
+                self.add_transition(n_start, "λ", n_end)
+                self.add_transition(end, "λ", start)
+                self.add_transition(end, "λ", n_end)
+                stack.append((n_start, n_end))
+                
+            elif c == '.': # Concatenación
+                start2, end2 = stack.pop()
+                start1, end1 = stack.pop()
+                self.add_transition(end1, "λ", start2)
+                stack.append((start1, end2))
+                
+            elif c == '|': # Unión
+                start2, end2 = stack.pop()
+                start1, end1 = stack.pop()
+                n_start, n_end = new_state(), new_state()
+                self.add_transition(n_start, "λ", start1)
+                self.add_transition(n_start, "λ", start2)
+                self.add_transition(end1, "λ", n_end)
+                self.add_transition(end2, "λ", n_end)
+                stack.append((n_start, n_end))
+                
+            elif is_literal(c): # Símbolo del alfabeto
+                start, end = new_state(), new_state()
+                self.add_transition(start, c, end)
+                stack.append((start, end))
+
+        # El último fragmento en la pila es nuestro AFN completo
+        if stack:
+            final_start, final_end = stack.pop()
+            self.initial_state = final_start
+            self.final_states = [final_end]
+        else:
+            # Seguro por si mandan una cadena vacía
+            s = new_state()
+            self.initial_state = s
+            self.final_states = [s]
             
-            # Para fines de que tu programa sea funcional de inmediato:
-            # 1. Definimos un estado inicial y uno final
-            start_node = "q0"
-            end_node = f"q{len(regex)}"
-            self.states = [start_node, end_node]
-            self.initial_state = start_node
-            self.final_states = [end_node]
-            
-            # Simulación de construcción (sustituir por lógica de Thompson completa)
-            # Esto permite que draw_on_canvas no falle al recibir la ER
-            last_s = start_node
-            for i, char in enumerate(regex):
-                new_s = f"q{i+1}"
-                if new_s not in self.states: self.states.append(new_s)
-                self.add_transition(last_s, char, new_s)
-                last_s = new_s
-            
-            print(f"AFN generado para: {regex}")
-        except Exception as e:
-            raise Exception(f"Error en el parseo de la ER: {str(e)}")
+        print(f"AFN generado exitosamente para: {regex}")
 
     def to_regex(self):
         """
