@@ -199,70 +199,6 @@ class Automaton:
                 dfa.add_transition(T_name, a, dfa_states[U_closure])
         return dfa
 
-    def to_regex(self):
-        """Implementa el Teorema de Kleene mediante eliminación de estados."""
-        import copy
-        
-        # 1. Crear una copia de las transiciones para no destruir el autómata original
-        states = list(self.states)
-        # Diccionario de transiciones: (q_i, q_j) -> Expresión Regular
-        R = {}
-
-        # Inicializar R con las transiciones existentes (Unión si hay varias)
-        for q in states:
-            for char in self.alphabet:
-                if (q, char) in self.transitions:
-                    for dest in self.transitions[(q, char)]:
-                        if (q, dest) not in R: R[(q, dest)] = char
-                        else: R[(q, dest)] = f"({R[(q, dest)]}+{char})"
-        
-        # Manejar lambdas si existen
-        if "λ" in self.alphabet:
-            for q in states:
-                if (q, "λ") in self.transitions:
-                    for dest in self.transitions[(q, "λ")]:
-                        if (q, dest) not in R: R[(q, dest)] = "λ"
-                        else: R[(q, dest)] = f"({R[(q, dest)]}+λ)"
-
-        # 2. Agregar un nuevo estado inicial (S) y final (E)
-        S, E = "START_NODE", "END_NODE"
-        R[(S, self.initial_state)] = "λ"
-        for f in self.final_states:
-            R[(f, E)] = "λ"
-        
-        temp_states = states + [S, E]
-
-        # 3. Eliminar estados uno por uno (excepto S y E)
-        for q_rem in states:
-            # Seleccionamos todos los pares (q_i, q_j) que pasan por q_rem
-            for q_i in temp_states:
-                if q_i == q_rem or q_i == E: continue
-                for q_j in temp_states:
-                    if q_j == q_rem or q_j == S: continue
-                    
-                    # Fórmula de eliminación: R_ij = R_ij + R_ik (R_kk)* R_kj
-                    r_ij = R.get((q_i, q_j))
-                    r_ik = R.get((q_i, q_rem))
-                    r_kk = R.get((q_rem, q_rem))
-                    r_kj = R.get((q_rem, q_j))
-
-                    if r_ik and r_kj:
-                        # Construir la nueva parte: r_ik(r_kk)*r_kj
-                        term = f"({r_ik})"
-                        if r_kk: term += f"({r_kk})*"
-                        term += f"({r_kj})"
-                        
-                        if r_ij:
-                            R[(q_i, q_j)] = f"({r_ij}+{term})"
-                        else:
-                            R[(q_i, q_j)] = term
-            
-            # Quitar el estado eliminado de las transiciones
-            keys_to_del = [k for k in R if q_rem in k]
-            for k in keys_to_del: del R[k]
-
-        return R.get((S, E), "∅").replace("λ", "ε") # Retorna la ER final
-
     def draw_on_canvas(self, canvas):
         canvas.delete("all")
         canvas.update_idletasks()
@@ -307,7 +243,7 @@ class Automaton:
         Construye un AFN a partir de una Expresión Regular usando el Algoritmo de Thompson.
         """
         self.clear() # Limpiamos cualquier estado o transición anterior
-        regex = regex.replace(" ", "")
+        regex = regex.replace(" ", "").replace("ε", "λ")
         
         # Función auxiliar para identificar literales del alfabeto
         def is_literal(c):
@@ -411,26 +347,94 @@ class Automaton:
 
     def to_regex(self):
         """
-        Convierte el autómata actual a una Expresión Regular usando eliminación de estados.
-       
+        Convierte el autómata actual a una Expresión Regular usando eliminación de estados
+        (Teorema de Kleene).
         """
-        if not self.states:
+        if not self.states or not self.initial_state or not self.final_states:
             return "∅"
+
+        # 1. Crear un diccionario de transiciones: (origen, destino) -> Expresión Regular
+        R = {}
+
+        # Inicializar R con las transiciones existentes (Unión si hay múltiples símbolos)
+        for q in self.states:
+            for char in self.alphabet:
+                if (q, char) in self.transitions:
+                    for dest in self.transitions[(q, char)]:
+                        if (q, dest) not in R: 
+                            R[(q, dest)] = char
+                        else: 
+                            R[(q, dest)] = f"({R[(q, dest)]}+{char})"
         
-        # Clonamos la estructura para no destruir el autómata original
-        temp_states = self.states.copy()
+        # Manejar lambdas si existen en las transiciones originales
+        if "λ" in self.alphabet:
+            for q in self.states:
+                if (q, "λ") in self.transitions:
+                    for dest in self.transitions[(q, "λ")]:
+                        if (q, dest) not in R: 
+                            R[(q, dest)] = "λ"
+                        else: 
+                            R[(q, dest)] = f"({R[(q, dest)]}+λ)"
+
+        # 2. Agregar un nuevo estado inicial (S) y final (E)
+        S, E = "START_NODE", "END_NODE"
+        R[(S, self.initial_state)] = "λ"
+        for f in self.final_states:
+            R[(f, E)] = "λ"
         
-        # Lógica simplificada del Teorema de Kleene:
-        # 1. Unificar estados finales en uno solo
-        # 2. Eliminar estados intermedios uno a uno concatenando sus etiquetas
-        #
-        
-        res_regex = ""
-        for char in self.alphabet:
-            if res_regex: res_regex += "|"
-            res_regex += f"{char}*"
+        temp_states = list(self.states) + [S, E]
+
+        # 3. Eliminar estados intermedios uno por uno (excepto S y E)
+        for q_rem in self.states:
+            # Seleccionamos todos los pares (q_i, q_j) que pasan por q_rem
+            for q_i in temp_states:
+                if q_i == q_rem or q_i == E: continue
+                for q_j in temp_states:
+                    if q_j == q_rem or q_j == S: continue
+                    
+                    # Fórmula de eliminación: R_ij = R_ij + R_ik (R_kk)* R_kj
+                    r_ij = R.get((q_i, q_j))
+                    r_ik = R.get((q_i, q_rem))
+                    r_kk = R.get((q_rem, q_rem))
+                    r_kj = R.get((q_rem, q_j))
+
+                    # Solo si existe un camino de q_i a q_j a través de q_rem
+                    if r_ik and r_kj:
+                        # Construir la nueva parte: r_ik(r_kk)*r_kj
+                        
+                        # Simplificaciones básicas para no tener paréntesis excesivos
+                        term_ik = r_ik if len(r_ik) == 1 or r_ik == "λ" else f"({r_ik})"
+                        term_kj = r_kj if len(r_kj) == 1 or r_kj == "λ" else f"({r_kj})"
+                        
+                        term = ""
+                        if term_ik != "λ": term += term_ik
+                        
+                        if r_kk: 
+                            if len(r_kk) == 1: term += f"{r_kk}*"
+                            else: term += f"({r_kk})*"
+                            
+                        if term_kj != "λ": term += term_kj
+                        
+                        if term == "": term = "λ" # Si todo era lambda, el resultado es lambda
+
+                        # Unir con el camino directo existente (si lo hay)
+                        if r_ij:
+                            R[(q_i, q_j)] = f"({r_ij}+{term})"
+                        else:
+                            R[(q_i, q_j)] = term
             
-        return f"({res_regex})" # Retorna una aproximación basada en el alfabeto actual
+            # Limpiar las transiciones del estado eliminado para liberar memoria
+            keys_to_del = [k for k in R if q_rem in k]
+            for k in keys_to_del: 
+                del R[k]
+
+        # 4. El resultado final es la transición del START_NODE al END_NODE
+        final_regex = R.get((S, E), "∅")
+        
+        # Opcional: Reemplazar el símbolo de suma por la barra de unión estándar y λ por ε
+        final_regex = final_regex.replace("+", "|").replace("λ", "ε")
+        
+        return final_regex
 
     def save_to_json(self, path):
         data = {
