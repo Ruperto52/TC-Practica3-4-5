@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
+import re
 from logic.strings_logic import get_prefixes, get_suffixes, get_substrings
 from logic.languages_logic import get_kleene_closure, get_positive_closure
 from logic.automaton_logic import Automaton 
@@ -28,7 +29,9 @@ class App:
             3: {"accent": "#db2777", "btn": "#be185d"}, # Rosa (Constructor)
             4: {"accent": "#f97316", "btn": "#ea580c"}, # Naranja (Operaciones)
             5: {"accent": "#06b6d4", "btn": "#0891b2"}, # Cian (AF -> ER)
-            6: {"accent": "#f87171", "btn": "#ef4444"}  # Rojo Claro (ER -> AF)
+            6: {"accent": "#f87171", "btn": "#ef4444"}, # Rojo Claro (ER -> AF)
+            7: {"accent": "#3b82f6", "btn": "#2563eb"}
+
         }
 
         self.style = ttk.Style()
@@ -39,8 +42,9 @@ class App:
         self.nb = ttk.Notebook(self.root)
         self.nb.pack(expand=True, fill="both", padx=15, pady=15)
 
-        nombres = [" 1. CADENAS ", " 2. LENGUAJES ", " 3. SIMULADOR ", " 4. CONSTRUCTOR ", " 5. OPERACIONES ", " 6. AF ➔ ER ", " 7. ER ➔ AF "]
-        self.tabs = [tk.Frame(self.nb, bg="#1e293b") for _ in range(7)]
+        nombres = [" 1. CADENAS ", " 2. LENGUAJES ", " 3. SIMULADOR ", " 4. CONSTRUCTOR ", " 5. OPERACIONES ", " 6. AF ➔ ER ", " 7. ER ➔ AF ", " 8. APLICACIONES "]
+        self.tabs = [tk.Frame(self.nb, bg="#1e293b") for _ in range(8)]
+        
         for tab, nom in zip(self.tabs, nombres): 
             self.nb.add(tab, text=nom)
 
@@ -54,6 +58,7 @@ class App:
         self.setup_tab_operaciones()
         self.setup_tab_af_to_er()
         self.setup_tab_er_to_af()
+        self.setup_tab_aplicaciones()
 
     def actualizar_estilo_pestaña(self, event):
         idx = self.nb.index("current")
@@ -317,20 +322,116 @@ class App:
         regex = self.ent_er_input.get().strip()
         if regex:
             try:
-                self.dfa_regex_to_af = Automaton()
-                # Requiere implementar 'from_regex' en logic/automaton_logic.py
-                self.dfa_regex_to_af.from_regex(regex)
+                # 1. Construcción inicial (Genera el autómata con muchos estados y lambdas)
+                base_automaton = Automaton()
+                # Compatibilidad de símbolos: tratamos ε como λ
+                base_automaton.from_regex(regex.replace("ε", "λ"))
+                
+                # 2. Transformación a AFD (Elimina las transiciones λ)
+                dfa_version = base_automaton.to_dfa()
+                
+                # 3. Minimización (Reduce el número de estados al mínimo posible)
+                # Usamos el método minimize() que devuelve (min_dfa, o, m, p)
+                self.dfa_regex_to_af, _, _, _ = dfa_version.minimize()
+                
+                # 4. Dibujar el resultado final simplificado
                 self.root.update()
                 self.dfa_regex_to_af.draw_on_canvas(self.can_er_af)
-            except AttributeError:
-                messagebox.showerror("Error", "El método 'from_regex' no está implementado en logic/automaton_logic.py")
+                
             except Exception as e:
-                messagebox.showerror("Error", f"Error en la ER: {str(e)}")
+                messagebox.showerror("Error", f"No se pudo simplificar el autómata: {str(e)}")
 
     def guardar_er_af(self):
         if hasattr(self, 'dfa_regex_to_af') and self.dfa_regex_to_af:
             p = filedialog.asksaveasfilename(defaultextension=".jff")
             if p: self.dfa_regex_to_af.save_to_jff(p)
+
+    # --- PESTAÑA 8: APLICACIONES ---
+    def setup_tab_aplicaciones(self):
+        t = self.temas[7]
+        f = tk.Frame(self.tabs[7], bg="#1e293b", padx=30, pady=30)
+        f.pack(expand=True, fill="both")
+        
+        tk.Label(f, text="APLICACIONES DE EXPRESIONES REGULARES", bg="#1e293b", fg=t["accent"], font=("Arial", 20, "bold")).pack(pady=10)
+        
+        # Panel de Controles
+        ctrl_f = tk.Frame(f, bg="#1e293b")
+        ctrl_f.pack(fill="x", pady=10)
+        
+        tk.Label(ctrl_f, text="Tipo de Dato:", bg="#1e293b", fg="white", font=("Arial", 12)).pack(side="left")
+        self.combo_app = ttk.Combobox(ctrl_f, values=["Correo Electrónico", "URL", "Fecha (DD/MM/AAAA)"], state="readonly", font=("Arial", 12), width=20)
+        self.combo_app.current(0)
+        self.combo_app.pack(side="left", padx=10)
+        
+        tk.Label(ctrl_f, text="Texto:", bg="#1e293b", fg="white", font=("Arial", 12)).pack(side="left", padx=(15, 0))
+        self.ent_app_input = tk.Entry(ctrl_f, font=("Consolas", 14), bg="#0f172a", fg="white", relief="flat")
+        self.ent_app_input.pack(side="left", fill="x", expand=True, padx=10)
+        
+        tk.Button(ctrl_f, text="VALIDAR Y GRAFICAR", command=self.ejecutar_aplicacion, bg=t["btn"], fg="white", font=("bold", 11), padx=15).pack(side="left")
+
+        # Panel de Retroalimentación
+        feed_f = tk.Frame(f, bg="#0f172a", pady=10, highlightthickness=1, highlightbackground=t["accent"])
+        feed_f.pack(fill="x", pady=15)
+        self.lbl_app_res = tk.Label(feed_f, text="Esperando entrada...", bg="#0f172a", font=("Arial", 14, "bold"), fg="white")
+        self.lbl_app_res.pack()
+        self.lbl_app_sug = tk.Label(feed_f, text="", bg="#0f172a", font=("Arial", 11), fg="#fbbf24")
+        self.lbl_app_sug.pack(pady=5)
+
+        # Canvas para el Autómata
+        tk.Label(f, text="Autómata Finito Estructural (Versión Didáctica)", bg="#1e293b", fg=t["accent"], font=("Arial", 10, "italic")).pack(anchor="w")
+        self.can_app = tk.Canvas(f, bg="#020617", highlightthickness=1, highlightbackground=t["accent"])
+        self.can_app.pack(fill="both", expand=True)
+
+    def ejecutar_aplicacion(self):
+        tipo = self.combo_app.get()
+        texto = self.ent_app_input.get().strip()
+        
+        # 1. Definir ER estricta (re) y ER didáctica estructural (Thompson Canvas)
+        if tipo == "Correo Electrónico":
+            patron_estricto = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+            # CAMBIO: Usamos 'p' para representar el punto literal y evitar conflictos
+            er_didactica = "(u|p)*@(d)*p(c|o|m)" 
+            sugerencia_gen = "Formato esperado: usuario@dominio.com."
+        elif tipo == "URL":
+            patron_estricto = r'^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$'
+            # CAMBIO: Simplificamos para que el algoritmo de Thompson no se confunda
+            er_didactica = "(h|t|p|s)*:(/|/)*(w)*p(d)*p(c|o)"
+            sugerencia_gen = "Formato esperado: http://www.sitio.com o www.sitio.com."
+        else: # Fecha
+            patron_estricto = r'^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])/\d{4}$'
+            er_didactica = "(d|d)/(m|m)/(a|a|a|a)"
+            sugerencia_gen = "Formato esperado: DD/MM/AAAA. Revisa que el mes sea <= 12."
+
+        # 2. Validación de Retroalimentación Inteligente
+        if re.match(patron_estricto, texto):
+            self.lbl_app_res.config(text="✓ VALIDACIÓN EXITOSA", fg="#10b981")
+            self.lbl_app_sug.config(text="El texto cumple correctamente con las reglas de la expresión regular.")
+        else:
+            self.lbl_app_res.config(text="✕ TEXTO INVÁLIDO", fg="#ef4444")
+            
+            # Análisis específico de errores
+            sugerencia = sugerencia_gen
+            if tipo == "Correo Electrónico":
+                if "@" not in texto: sugerencia = "Error: Falta el símbolo '@' en tu correo."
+                elif "." not in texto.split("@")[-1]: sugerencia = "Error: Falta el punto '.' en el dominio (ej. .com, .mx)."
+            elif tipo == "URL":
+                if " " in texto: sugerencia = "Error: Una URL no puede contener espacios en blanco."
+            elif tipo == "Fecha (DD/MM/AAAA)":
+                if "-" in texto: sugerencia = "Error: Utiliza barras diagonales '/' en lugar de guiones '-'."
+                elif len(texto.split("/")) != 3: sugerencia = "Error: Faltan separadores de Día, Mes o Año."
+            
+            self.lbl_app_sug.config(text=f"Sugerencia: {sugerencia}")
+
+        # 3. Dibujar el Autómata Didáctico
+        try:
+            if not hasattr(self, 'dfa_app'):
+                self.dfa_app = Automaton() # Reutilizamos la c del simulador
+            
+            self.dfa_app.from_regex(er_didactica)
+            self.root.update()
+            self.dfa_app.draw_on_canvas(self.can_app)
+        except Exception as e:
+            messagebox.showerror("Error de Graficación", f"Error al generar AFN: {str(e)}")
 
     # --- UTILIDAD: DIBUJO DE TABLAS ---
     def mostrar_tabla(self, frame, dfa_obj, editable=False, color_accent="#38bdf8"):
