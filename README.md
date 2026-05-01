@@ -11,10 +11,19 @@
 ---
 
 ## Objetivo
-El propósito de esta práctica es profundizar en la comprensión y aplicación de los Autómatas Finitos No Deterministas (AFND) mediante el uso de JFLAP, y desarrollar una aplicación con interfaz gráfica que permita simular Autómatas Finitos Deterministas (AFD) a partir de diferentes formatos de entrada.
+1. Investigar y comprender la importancia y aplicaciones de las expresiones regulares en la teoría de la
+computación y en el desarrollo de software.
+2. Implementar en el software interactivo desarrollado anteriormente la funcionalidad para convertir
+Autómatas Finitos Deterministas (AFD) a Expresiones Regulares (ER).
+3. Desarrollar una interfaz gráfica que permita la conversión de AFD a ER.
+4. Aplicar los conocimientos adquiridos sobre autómatas y expresiones regulares para resolver problemas
+prácticos.
 
 ## Introduccion 
-En esta practica exploraremos los conceptos de: **Expreciones Regulares**, **Automata Finito No Determinista**, **Automata Finito No Determinista con transiciones lamda** y por ende **El Teorema De Kleene** todos estos conceptos recopilan nuestro conocimiento previo, tenemos que aplicar tanto los conceptos vistos en las practicas anteriores y probar estos nuevos conceptos en esta practica.
+En esta práctica,exploraremos la importancia y aplicaciones de las expresiones regulares
+(ER) en la teoría de la computación y en contextos prácticos. Además, extenderemos el software interactivo
+desarrollado en prácticas anteriores para implementar la conversión de Autómatas Finitos Deterministas (AFD)
+a Expresiones Regulares (ER).
 
 ### **Expreciones Regulares**
 Las expresiones regulares son un equivalente algebraico para un aut´omata. Utilizado en muchos lugares
@@ -54,6 +63,87 @@ Es un modelo matemático formado por una quíntupla $N_\lambda = \{\Sigma, S, S_
    **Definición de elementos:**
    * $\forall s \in S, \forall a \in (\Sigma \cup \{\lambda\})$
 
+
+### Definición formal de lenguaje regular
+* Un lenguaje regular sobre un alfabeto $\Sigma$ dado se define recursivamente como:
+    * El lenguaje vacío $\Phi$ es un lenguaje regular
+    * El lenguaje cadena vacía $\{\epsilon\}$ es un lenguaje regular
+    * Para todo símbolo $a \in \Sigma$ $\{a\}$ es un lenguaje regular
+    * Si $A$ y $B$ son lenguajes regulares entonces $A \cup B$ (unión), $AB$ (concatenación) y $A^*$ (cerradura de Kleene) son lenguajes regulares
+    * Si $A$ es un lenguaje regular entonces $(A)$ es el mismo lenguaje regular
+    * No existen más lenguajes regulares sobre $\Sigma$
+
+### **Componentes básicos de las expresiones regulares**
+* Las expresiones regulares básicas se definen de la siguiente forma:
+    * El símbolo $\Phi$ (conjunto vacío) es una expresión regular y $L(\Phi)=\{\}$
+    
+    * El símbolo $\lambda$ (palabra vacía) es una expresión regular y $L(\lambda)=\{\lambda\}$
+    
+    * Cualquier símbolo $a \in \Sigma$ es una expresión regular y $L(a)=\{a\}$
+
+### **Los operadores de las expresiones regulares**
+
+Comúnmente existen tres operadores de las expresiones regulares: **Unión**, **concatenación** y **cerradura**.
+
+ **1. Unión**
+Si $L$ y $M$ son dos lenguajes, su unión se denota por $L \cup M$.
+> **Ejemplo:** Si $L = \{001, 10, 111\}$ y $M = \{\epsilon, 001\}$, entonces la unión será:
+> $L \cup M = \{\epsilon, 10, 001, 111\}$.
+
+**2. Concatenación**
+La concatenación de lenguajes se denota como $LM$ o $L.M$.
+> **Ejemplo:** Si $L = \{001, 10, 111\}$ y $M = \{\epsilon, 001\}$, entonces la concatenación será:
+> $LM = \{001, 10, 111, 001001, 10001, 111001\}$.
+
+**3. Cerradura (o cerradura de Kleene)**
+La cerradura de un lenguaje $L$ se denota como $L^*$. Representa el conjunto de cadenas que pueden formarse tomando cualquier número de cadenas de $L$, posiblemente con repeticiones y concatenando todas ellas.
+
+* Para calcular $L^*$ se debe calcular $L^i$ para cada $i$ y tomar la unión de todos estos lenguajes.
+* Aunque cada $L^i$ es finito, la unión del número de términos de $L^i$ es en general un conjunto infinito.
+
+**Ejemplos de cerradura:**
+* Si $L = \{0, 1\}$, $L^*$ son todas las cadenas con `0`s y `1`s.
+* Si $L = \{0, 11\}$, $L^*$ son todas las cadenas de `0`s y `1`s tal que los `1`s están en pareja.
+* $\emptyset^* = \{\epsilon\}$ o $\emptyset^0 = \{\epsilon\}$.
+
+### Jerarquía de Chomsky y ubicación de los lenguajes regulares
+
+La **Jerarquía de Chomsky** es una clasificación de las gramáticas formales que describe la potencia generativa de diferentes lenguajes y los modelos computacionales necesarios para reconocerlos. El principal objetivo de Chomsky y su jerarquía era demostrar que los dos primeros tipos de gramáticas son incapaces de dar cuenta, de la complejidad de las lenguas naturales.
+
+**Estructura de la Jerarquía**
+
+La jerarquía se organiza en niveles concéntricos donde cada nivel superior contiene a los niveles inferiores:
+
+
+**Tipo 0: Lenguajes Recursivamente Enumerables**
+* **Gramáticas:** Sin restricciones.
+* **Reconocedor:** Máquina de Turing.
+* **Descripción:** Conjuntos de objetos formales de cualquier complejidad computacional. Es el nivel más general.
+
+ **Tipo 1: Lenguajes Sensibles al Contexto**
+* **Gramáticas:** Sensibles al contexto.
+* **Reconocedor:** Autómatas Linealmente Acotados (usan como máximo $n+1$ espacios en la cinta).
+* **Descripción:** Conjuntos de conjuntos de secuencias de símbolos (o "cadenas").
+
+ **Tipo 2: Lenguajes Libres de Contexto**
+* **Gramáticas:** Libres de contexto.
+* **Reconocedor:** Autómatas de Pila.
+* **Descripción:** Conjuntos de secuencias de símbolos. Fundamentales para lenguajes de programación.
+
+ **Tipo 3: Lenguajes Regulares**
+* **Gramáticas:** Gramáticas regulares.
+* **Reconocedor:** Autómatas Finitos Deterministas (**AFD**) o No Deterministas (**AFN**).
+* **Descripción:** Secuencias de símbolos. Es el nivel más restrictivo y el lugar donde se ubican las **Expresiones Regulares**.
+
+ **Tabla Comparativa**
+
+| Tipo | Lenguaje | Gramática | Autómata (Reconocedor) |
+| :--- | :--- | :--- | :--- |
+| **Tipo 0** | Recursivos | Sin restricciones | Máquina de Turing |
+| **Tipo 1** | Sensibles al contexto | Sensible al contexto | Autómata linealmente acotado |
+| **Tipo 2** | Libres de contexto | Libre de contexto | Autómata de pila |
+| **Tipo 3** | *Regulares* | *Regular* | *Autómata finito* |
+
 ### **El Teorema De Kleene**
 El teorema de Kleene establece que un lenguaje es regular si y solo si es aceptado por algún autómata finito, demostrando la equivalencia entre las expresiones regulares y los autómatas finitos deterministas o no deterministas.  Desarrollado por Stephen Cole Kleene en la década de 1950, este teorema fundamental de la teoría de la computación permite convertir cualquier expresión regular en un autómata finito y viceversa mediante algoritmos constructivos. 
 
@@ -64,6 +154,57 @@ El teorema consta de 4 algoritmos:
 * NFA-ξ NFA:Elimina las transiciones épsilon del autómata para obtener un autómata no determinista estándar, calculando la cerradura épsilon y ajustando las transiciones para cada símbolo del alfabeto.
 * NFA DFA:Utiliza la construcción de subconjuntos para transformar el autómata no determinista en uno determinista, donde cada estado del nuevo autómata representa un conjunto de estados del original. 
 * DFA E.R.:Emplea un algoritmo iterativo (como el de McNaughton-Yamada o Kleene) para eliminar estados progresivamente y generar una expresión regular equivalente que describe el lenguaje aceptado.
+
+### Aplicaciones practicas las Expresiones Regulares en la Computación Moderna
+
+**1. Procesamiento de Texto y Búsqueda de Patrones**
+**Aplicación:** [Visual Studio Code](https://code.visualstudio.com/)
+Es el editor de código líder en la industria. Utiliza motores de Regex para permitir búsquedas masivas y refactorización de código fuente en proyectos de gran escala.
+
+* **Ejemplo:** `import\s+\{\s*(.*?)\s*\}\s+from\s+'(.*?)';`
+* **Funcionamiento:** Este patrón identifica declaraciones de importación desestructuradas. Captura en el primer grupo los componentes importados y en el segundo la ruta del módulo, permitiendo al desarrollador realizar cambios estructurales en todo un software de forma instantánea.
+
+
+**2. Análisis Léxico en Compiladores**
+**Aplicación:** [Flex (Fast Lexical Analyzer)](https://github.com/westes/flex)
+Herramienta fundamental en la ingeniería de software utilizada para generar analizadores léxicos (scanners) que reconocen patrones en el código fuente.
+
+* **Ejemplo:** `^[a-zA-Z_][a-zA-Z0-9_]*$`
+* **Funcionamiento:** Define la estructura legal de un "Identificador" (nombre de variable). La Regex asegura que el nombre empiece por una letra o guion bajo y contenga solo caracteres alfanuméricos, permitiendo al compilador distinguir entre variables válidas y errores sintácticos.
+
+
+**3. Validación de Datos en Formularios Web**
+**Aplicación:** [Django Framework (Validators)](https://www.djangoproject.com/)
+Framework web de alto nivel que utiliza expresiones regulares para asegurar la integridad de los datos antes de que sean procesados por el backend o almacenados.
+
+* **Ejemplo:** `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+* **Funcionamiento:** Verifica que la entrada del usuario tenga el formato correcto de un correo electrónico (parte local, símbolo `@`, dominio y extensión), evitando el ingreso de datos basura o malformados en los sistemas.
+
+
+**4. Filtrado y Manipulación de Datos**
+**Aplicación:** [MongoDB](https://www.mongodb.com/)
+Base de datos NoSQL que permite realizar consultas complejas mediante el operador `$regex`, facilitando la extracción de información en volúmenes masivos de datos.
+
+* **Ejemplo:** `{ "email": { "$regex": "@ipn\.mx$", "$options": "i" } }`
+* **Funcionamiento:** Filtra todos los documentos cuyos correos electrónicos pertenezcan al dominio institucional. El ancla `$` garantiza que la coincidencia ocurra al final de la cadena, optimizando la precisión de la consulta.
+
+
+ **5. Automatización en Sistemas Operativos**
+**Aplicación:** [GNU Grep / Sed](https://www.gnu.org/software/grep/)
+Utilidades esenciales de la línea de comandos en sistemas Unix/Linux para la administración de servidores y procesamiento de flujos de texto.
+
+* **Ejemplo:** `sed -i 's/DEBUG=True/DEBUG=False/g' settings.py`
+* **Funcionamiento:** Utiliza un comando de sustitución basado en Regex para buscar y reemplazar patrones específicos en archivos de configuración. Es vital para automatizar el despliegue de aplicaciones y la gestión de entornos de producción.
+
+**Resumen**
+
+| Dominio | Aplicación Existente | Rol de la Expresión Regular |
+| :--- | :--- | :--- |
+| **Desarrollo** | VS Code | Refactorización y navegación de código fuente. |
+| **Compiladores** | Flex / Lex | Transformación de caracteres en tokens legales. |
+| **Ingeniería Web** | Django | Seguridad y validación de integridad de datos. |
+| **Bases de Datos** | MongoDB | Consultas flexibles en esquemas NoSQL. |
+| **SysAdmin** | Grep / Sed | Automatización de tareas y edición de archivos de configuración. |
 
 ## Funcionalidades del Sistema
 La aplicación (desarrollada en Python con Tkinter) implementa los siguientes módulos:
@@ -1132,6 +1273,105 @@ def guardar_op(self):
 
 **Resumen de funcionamiento**: Esta pestaña cierra el círculo del Teorema de Kleene en la aplicación. El usuario ingresa una cadena de texto (ER), el sistema la analiza y construye una estructura de estados y transiciones que se proyecta visualmente en el lienzo oscuro con detalles en color rojo (`#f87171`).
 
+### Pestaña 8 (Aplicaciones)
+
+```python
+# --- PESTAÑA 8: APLICACIONES ---
+    def setup_tab_aplicaciones(self):
+        t = self.temas[7]
+        f = tk.Frame(self.tabs[7], bg="#1e293b", padx=30, pady=30)
+        f.pack(expand=True, fill="both")
+        
+        tk.Label(f, text="APLICACIONES DE EXPRESIONES REGULARES", bg="#1e293b", fg=t["accent"], font=("Arial", 20, "bold")).pack(pady=10)
+        
+        # Panel de Controles
+        ctrl_f = tk.Frame(f, bg="#1e293b")
+        ctrl_f.pack(fill="x", pady=10)
+        
+        tk.Label(ctrl_f, text="Tipo de Dato:", bg="#1e293b", fg="white", font=("Arial", 12)).pack(side="left")
+        self.combo_app = ttk.Combobox(ctrl_f, values=["Correo Electrónico", "URL", "Fecha (DD/MM/AAAA)"], state="readonly", font=("Arial", 12), width=20)
+        self.combo_app.current(0)
+        self.combo_app.pack(side="left", padx=10)
+        
+        tk.Label(ctrl_f, text="Texto:", bg="#1e293b", fg="white", font=("Arial", 12)).pack(side="left", padx=(15, 0))
+        self.ent_app_input = tk.Entry(ctrl_f, font=("Consolas", 14), bg="#0f172a", fg="white", relief="flat")
+        self.ent_app_input.pack(side="left", fill="x", expand=True, padx=10)
+        
+        tk.Button(ctrl_f, text="VALIDAR Y GRAFICAR", command=self.ejecutar_aplicacion, bg=t["btn"], fg="white", font=("bold", 11), padx=15).pack(side="left")
+
+        # Panel de Retroalimentación
+        feed_f = tk.Frame(f, bg="#0f172a", pady=10, highlightthickness=1, highlightbackground=t["accent"])
+        feed_f.pack(fill="x", pady=15)
+        self.lbl_app_res = tk.Label(feed_f, text="Esperando entrada...", bg="#0f172a", font=("Arial", 14, "bold"), fg="white")
+        self.lbl_app_res.pack()
+        self.lbl_app_sug = tk.Label(feed_f, text="", bg="#0f172a", font=("Arial", 11), fg="#fbbf24")
+        self.lbl_app_sug.pack(pady=5)
+
+        # Canvas para el Autómata
+        tk.Label(f, text="Autómata Finito Estructural (Versión Didáctica)", bg="#1e293b", fg=t["accent"], font=("Arial", 10, "italic")).pack(anchor="w")
+        self.can_app = tk.Canvas(f, bg="#020617", highlightthickness=1, highlightbackground=t["accent"])
+        self.can_app.pack(fill="both", expand=True)
+
+    def ejecutar_aplicacion(self):
+        tipo = self.combo_app.get()
+        texto = self.ent_app_input.get().strip()
+        
+        # 1. Definir ER estricta (re) y ER didáctica estructural (Thompson Canvas)
+        if tipo == "Correo Electrónico":
+            patron_estricto = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+            # CAMBIO: Usamos 'p' para representar el punto literal y evitar conflictos
+            er_didactica = "(u|p)*@(d)*p(c|o|m)" 
+            sugerencia_gen = "Formato esperado: usuario@dominio.com."
+        elif tipo == "URL":
+            patron_estricto = r'^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$'
+            # CAMBIO: Simplificamos para que el algoritmo de Thompson no se confunda
+            er_didactica = "(h|t|p|s)*:(/|/)*(w)*p(d)*p(c|o)"
+            sugerencia_gen = "Formato esperado: http://www.sitio.com o www.sitio.com."
+        else: # Fecha
+            patron_estricto = r'^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])/\d{4}$'
+            er_didactica = "(d|d)/(m|m)/(a|a|a|a)"
+            sugerencia_gen = "Formato esperado: DD/MM/AAAA. Revisa que el mes sea <= 12."
+
+        # 2. Validación de Retroalimentación Inteligente
+        if re.match(patron_estricto, texto):
+            self.lbl_app_res.config(text="✓ VALIDACIÓN EXITOSA", fg="#10b981")
+            self.lbl_app_sug.config(text="El texto cumple correctamente con las reglas de la expresión regular.")
+        else:
+            self.lbl_app_res.config(text="✕ TEXTO INVÁLIDO", fg="#ef4444")
+            
+            # Análisis específico de errores
+            sugerencia = sugerencia_gen
+            if tipo == "Correo Electrónico":
+                if "@" not in texto: sugerencia = "Error: Falta el símbolo '@' en tu correo."
+                elif "." not in texto.split("@")[-1]: sugerencia = "Error: Falta el punto '.' en el dominio (ej. .com, .mx)."
+            elif tipo == "URL":
+                if " " in texto: sugerencia = "Error: Una URL no puede contener espacios en blanco."
+            elif tipo == "Fecha (DD/MM/AAAA)":
+                if "-" in texto: sugerencia = "Error: Utiliza barras diagonales '/' en lugar de guiones '-'."
+                elif len(texto.split("/")) != 3: sugerencia = "Error: Faltan separadores de Día, Mes o Año."
+            
+            self.lbl_app_sug.config(text=f"Sugerencia: {sugerencia}")
+
+        # 3. Dibujar el Autómata Didáctico
+        try:
+            if not hasattr(self, 'dfa_app'):
+                self.dfa_app = Automaton() # Reutilizamos la c del simulador
+            
+            self.dfa_app.from_regex(er_didactica)
+            self.root.update()
+            self.dfa_app.draw_on_canvas(self.can_app)
+        except Exception as e:
+            messagebox.showerror("Error de Graficación", f"Error al generar AFN: {str(e)}")
+```
+
+La función `setup_tab_aplicaciones` se encarga de construir la parte visual de la pestaña utilizando `tkinter`. Sus funciones principales son:
+* **Configuración de entrada:** Se crea un menú desplegable (`Combobox`) que permite al usuario elegir el tipo de dato (correo, URL o fecha) y un campo de texto para ingresar la cadena a evaluar.
+* **Zona de resultados:** Se define un área de color oscuro (`Canvas`) donde se dibujará automáticamente el autómata resultante tras realizar la validación.
+* **Botón de acción:** El botón "VALIDAR Y GRAFICAR" conecta la interfaz con la lógica del programa, ejecutando la función `ejecutar_aplicacion`. La función `ejecutar_aplicacion` actúa como puente para procesar la interacción:
+    * Captura lo que el usuario eligió en el menú desplegable y el texto escrito en la caja de entrada.
+    * Envía esta información a los algoritmos de validación correspondientes para realizar el análisis y mostrar el resultado en la pantalla.
+* **Resumen de Funcionamiento**:La pestaña Aplicaciones actúa como un módulo de validación práctica que cierra el ciclo de aprendizaje al conectar la teoría de autómatas con casos de uso comunes en el desarrollo de software.
+
 ## Como ocupar el software
 ### Primeros pasos
 Lo primero que haremos sera como anteriormente lo habiamos explicado crear nuestro entorno virtual,en el cual debemos de verificar que la version de ```python es 3.12.3```, una vez comprobado esta version lo que tenemos que hacer es instalar Tkinter, la version que ocuparemos de Tkinter sera: ```8.6.14``` dentro de nuestro entorno virtual para estar listos para poder ejecutar el programa y asi ver la interfaz grafica.
@@ -1184,8 +1424,16 @@ La siguiente pestaña integra una herramienta de abstracción algebraica, diseñ
 * Procesamiento: Mediante el botón Generar **Expresión Regular**, el sistema aplica algoritmos de eliminación de estados o el método de Arden para reducir la lógica del grafo a una representación textual compacta.
 * Visualización del Resultado: La interfaz presenta un panel de salida dedicado donde se muestra la expresión obtenida (utilizando operadores estándar como * para cerradura de Kleene, | para unión y concatenación), permitiendo al usuario copiar la cadena para fines de documentación o programación.
 
-La ultima pestaña funciona como un motor de síntesis lógica, permitiendo al usuario transformar una descripción textual (ER) en un modelo gráfico funcional **(AF)**.
+La penultima pestaña funciona como un motor de síntesis lógica, permitiendo al usuario transformar una descripción textual (ER) en un modelo gráfico funcional **(AF)**.
 * Entrada de Expresión: El usuario dispone de un campo de texto dedicado para ingresar la **Expresión Regular** deseada. El sistema es capaz de interpretar operadores de unión, concatenación y cerraduras.
 * Proceso de Construcción: Al presionar el botón Construir, la aplicación implementa algoritmos de conversión para generar automáticamente un **autómata** equivalente a la expresión proporcionada.
 * Visualización Dinámica: El resultado se proyecta en un lienzo interactivo que muestra la estructura de estados y transiciones, facilitando la comprensión de cómo se descompone la lógica de la expresión en pasos finitos.
 * Exportación Directa: Al igual que en el módulo de construcción manual, se incluye la función Guardar .JFF, permitiendo descargar el autómata generado para su análisis externo o para cargarlo posteriormente en el Simulador del proyecto.
+ 
+Esta pestaña constituye la interfaz de usuario final, diseñada para demostrar la utilidad práctica de la teoría de autómatas mediante la validación de patrones de texto comunes. 
+* Selector de Tipo de Dato: El usuario dispone de un menú desplegable para elegir el modelo de validación deseado, incluyendo:
+* Correo Electrónico: Valida la estructura estándar de una dirección de correo (usuario@dominio.extensión).
+* URL: Verifica el formato sintáctico de direcciones web (protocolo, dominio y ruta).
+* Fecha (DD/MM/AAAA): Valida la estructura numérica y el formato de fechas estándar.
+* Entrada de Texto y Procesamiento: El sistema cuenta con un campo de texto donde el usuario ingresa la cadena a evaluar. Al presionar el botón *"Validar y Graficar"*, el motor interno procesa la entrada contra el autómata correspondiente al tipo de dato seleccionado.
+* Retroalimentación y Visualización: El sistema ofrece una respuesta inmediata sobre la validez del formato (aceptación o rechazo de la cadena), y despliega de forma dinámica el **Autómata Finito** que fundamenta dicha validación, permitiendo al usuario visualizar el recorrido de los estados que la cadena realiza.
